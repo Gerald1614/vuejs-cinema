@@ -1,48 +1,43 @@
 import './style.scss';
 import Vue from 'vue';
-import genres from './util/genres'
+
+import MovieList from './components/MovieList.vue';
+import MovieFilter from './components/MovieFilter.vue';
+
+import axios from 'axios';
+import moment from 'moment-timezone';
+moment.tz.setDefault("UTC");
+Object.defineProperty(Vue.prototype, '$moment', { get() { return this.$root.moment } });
 
 new Vue({
   el:'#app',
-  components: {
-    'movie-list': {
-      template: `<div id="movie-list">
-       <div v-for=" movie in movies" class="movie"> {{ movie.title }} </div>
-       </div>`,
-      data() {
-          return {
-            movies: [
-              { title: 'pulp fiction' },
-              { title: 'forrest gump' },
-              { title: 'tot' },
-              { title: 'bwrfbvwerfbvwerbv' }
-            ]
-          }
-        }
-    },
-    'movie-filter': {
-      data() {
-        return {
-          genres
-        }
-      },
-       template: `<div id="movie-filter">
-          <h2> Filter results </h2>
-          <div class="filter-group">
-            <check-filter v-for="genre in genres" :title="genre"></check-filter>
-          </div>
-        </div>`,
-      components: {
-        'check-filter': {
-          props: ['title'],
-          template: `<div class="check-filter">
-                <span class="checkbox"></span>
-                <span class="check-filter-title">{{title}}</span>
-              </div>`
+  data: {
+    genre: [],
+    time: [],
+    movies: [],
+    moment,
+    day: moment()
+  },
+  methods: {
+    checkFilter(category, title, checked) {
+      if (checked) {
+        this[category].push(title)
+      } else {
+        let index = this[category].indexOf(title);
+        if (index > -1) {
+          this[category].splice(index, 1);
         }
       }
     }
-  }
-
-
+  },
+  components: {
+    MovieList,
+    MovieFilter
+    },
+    created() {
+      axios.get(`/api`)
+      .then(response => {
+        this.movies = response.data;
+      })
+    }
 })
