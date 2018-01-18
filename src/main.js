@@ -1,13 +1,20 @@
 import './style.scss';
 import Vue from 'vue';
 
-import MovieList from './components/MovieList.vue';
-import MovieFilter from './components/MovieFilter.vue';
-
 import axios from 'axios';
 import moment from 'moment-timezone';
 moment.tz.setDefault("UTC");
 Object.defineProperty(Vue.prototype, '$moment', { get() { return this.$root.moment } });
+
+import { checkFilter, setDay } from './util/bus';
+const bus = new Vue();
+Object.defineProperty(Vue.prototype, '$bus', { get() { return this.$root.bus } });
+
+import routes from './util/routes';
+import VueRouter from 'vue-router';
+Vue.use(VueRouter);
+
+const router = new VueRouter({ routes })
 
 new Vue({
   el:'#app',
@@ -16,28 +23,50 @@ new Vue({
     time: [],
     movies: [],
     moment,
-    day: moment()
+    day: moment(),
+    bus
   },
-  methods: {
-    checkFilter(category, title, checked) {
-      if (checked) {
-        this[category].push(title)
-      } else {
-        let index = this[category].indexOf(title);
-        if (index > -1) {
-          this[category].splice(index, 1);
-        }
-      }
-    }
-  },
-  components: {
-    MovieList,
-    MovieFilter
-    },
     created() {
       axios.get(`/api`)
       .then(response => {
         this.movies = response.data;
-      })
-    }
+      });
+      this.$bus.$on('check-filter', checkFilter.bind(this));
+      this.$bus.$on('set-day', setDay.bind(this));
+    },
+    router
+})
+
+import { addClass, removeClass } from './util/helpers';
+
+let mouseOverHandler = function(event) {
+  let span = event.target.parentNode.getElementsByTagName('SPAN')[0];
+  addClass(span, 'tooltip-show');
+}
+
+let mouseOutHandler = function(event) {
+  let span = event.target.parentNode.getElementsByTagName('SPAN')[0];
+  removeClass(span, 'tooltip-show');
+}
+
+Vue.directive('tooltip', {
+  bind(el, bindings) {
+    let span = document.createElement('SPAN');
+    let text = document.createTextNode('seats available: 200');
+    span.appendChild(text);
+    addClass(span, 'tooltip');
+    el.appendChild(span);
+    let div = el.getElementsByTagName('DIV')[0];
+    div.addEventListener('mouseover', mouseOverHandler);
+    div.addEventListener('mouseout', mouseOutHandler);
+    div.addEventListener('touchstart', mouseOverHandler);
+    div.addEventListener('touchend', mouseOutHandler);
+  },
+  unbind(el) {
+    let div = el.getElementsByTagName('DIV')[0];
+    div.removeEventListener('mouseover', mouseOverHandler);
+    div.removeEventListener('mouseout', mouseOutHandler);
+    div.removeEventListener('touchstart', mouseOverHandler);
+    div.removeEventListener('touchend', mouseOutHandler);
+  }
 })
